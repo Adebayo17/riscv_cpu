@@ -103,7 +103,6 @@ The ALU will support the following RV32I instructions:
 
 
 
-
 ## **Instruction Decode (ID) Unit Design**
 ### Instruction Decode (ID) Unit Overview
 The Instruction Decode Unit extracts fields from a 32-bit instruction:
@@ -128,4 +127,28 @@ The Instruction Decode Unit extracts fields from a 32-bit instruction:
 |  `funct3`   | output wire [2:0]    | Function field (R/I/S-type)          |
 |  `funct7`   | output wire [6:0]    | Function field (R-type)              |
 |  `imm`      | output wire [31:0]   | Immediate value (for I, S, B-type)   |
+
+
+
+## **Datapath Design Design**
+### Datapath Design Overview
+The datapath consists of the following components:
+-   **Instruction Fetch** – Fetches instructions from memory
+-   **Instruction Decode** – Decodes instructions and provides control signals
+-   **Register File** – Reads and writes register values
+-   **ALU** – Performs arithmetic and logical operations
+-   **Memory Access** – Handles `LW` and `SW` operations
+-   **PC Update Logic** – Updates the program counter (`PC`)
+
+
+### Datapath Design Module
+-   Module name: `datapath`
+-   Source File: `src/datapath.v`
+-   Module Ports:
+
+| Name        | Type                | Description                          |
+|---          |:-                   |:-                                    |
+|  `clk`      | input  wire         | System Clock                         |
+|  `reset`    | input  wire         | System Reset Signal                  |
+|  `instr`    | output wire [31:0]  | Instruction output (for debugging)   |
 
