@@ -32,10 +32,19 @@ module datapath (
         else
             pc <= next_pc;
 
-            // Debug: Print executed instruction
+            // Debug: Print executed instruction and register values
             $display("PC: %h | Instruction: %h", pc, instr);
-            $display("Reg x1: %h | Reg x2: %h | Reg x3: %h", registers.registers[1], registers.registers[2], registers.registers[3]);
-            $display("---------------------------");
+            $display("Reg x1: %h | Reg x2: %h | Reg x3: %h | Reg x4: %h | Reg x5: %h | Reg x6: %h | Reg x7: %h",
+                    registers.registers[1], registers.registers[2], registers.registers[3],
+                    registers.registers[4], registers.registers[5], registers.registers[6], registers.registers[7]);
+
+            // Debug: Print memory updates
+            if (mem_write)
+                $display("Memory Write: Addr %h = %h", alu_result, reg_data2);
+            if (mem_read)
+                $display("Memory Read: Addr %h -> %h", alu_result, mem_data);
+
+            $display("----------------------------");
     end
 
     // Instruction Memory (simple ROM model)
