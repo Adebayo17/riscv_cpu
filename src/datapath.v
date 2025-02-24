@@ -192,10 +192,6 @@ module datapath (
             {R_TYPE_OPCODE, 7'b0000000, 3'b101}: alu_ctrl_calculated = 4'b0110; // SRL
             {R_TYPE_OPCODE, 7'b0100000, 3'b101}: alu_ctrl_calculated = 4'b0111; // SRA
             {R_TYPE_OPCODE, 7'b0000001, 3'b000}: alu_ctrl_calculated = 4'b1000; // MUL
-            // {R_TYPE_OPCODE, 7'b0000001, 3'b100}: alu_ctrl_calculated = 4'b1001; // DIV
-            // {R_TYPE_OPCODE, 7'b0000001, 3'b110}: alu_ctrl_calculated = 4'b1010; // REM
-            // {R_TYPE_OPCODE, 7'b0000001, 3'b101}: alu_ctrl_calculated = 4'b1011; // DIVU
-            // {R_TYPE_OPCODE, 7'b0000001, 3'b111}: alu_ctrl_calculated = 4'b1100; // REMU
 
             // I-type instructions
             {I_TYPE_OPCODE, 7'b0000000, 3'b000}: alu_ctrl_calculated = 4'b0000; // ADDI

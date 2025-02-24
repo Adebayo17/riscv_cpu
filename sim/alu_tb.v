@@ -227,159 +227,30 @@ module alu_tb;
         else
             $display("✅ PASS");
 
-        // // Test 16: DIV operation (positive / positive)
-        // a = 32'h0000000A;
-        // b = 32'h00000002;
-        // alu_ctrl = 4'b1001; // DIV
-        // #10;
-        // $display("\nTest 16: DIV (positive / positive)");
-        // $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-        //          a, b, alu_ctrl, result, zero, alu_ready);
-        // if (result !== 32'h00000005 || zero !== 0 || alu_ready !== 1)
-        //     $display("❌ ERROR: Test 16 failed!");
-        // else
-        //     $display("✅ PASS");
-        
-        // // Test 17: DIV operation (negative / negative)
-        // a = 32'hFFFFFFFC; // -4
-        // b = 32'hFFFFFFFE; // -2
-        // alu_ctrl = 4'b1001; // DIV
-        // #10;
-        // $display("\nTest 17: DIV (negative / negative)");
-        // $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-        //          a, b, alu_ctrl, result, zero, alu_ready);
-        // if (result !== 32'h00000002 || zero !== 0 || alu_ready !== 1) // 2
-        //     $display("❌ ERROR: Test 17 failed!");
-        // else
-        //     $display("✅ PASS");
 
-        // // Test 18: DIV operation (negative / positive)
-        // a = 32'hFFFFFFFC; // -4
-        // b = 32'h00000002; // 2
-        // alu_ctrl = 4'b1001; // DIV
-        // #10;
-        // $display("\nTest 18: DIV (negative / positive)");
-        // $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-        //          a, b, alu_ctrl, result, zero, alu_ready);
-        // if (result !== 32'hFFFFFFFE || zero !== 0 || alu_ready !== 1) // -2
-        //     $display("❌ ERROR: Test 18 failed!");
-        // else
-        //     $display("✅ PASS");
-
-        // // Test 19: REM operation (positive % positive)
-        // a = 32'h0000000A;
-        // b = 32'h00000003;
-        // alu_ctrl = 4'b1010; // REM
-        // #10;
-        // $display("\nTest 19: REM (positive % positive)");
-        // $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-        //          a, b, alu_ctrl, result, zero, alu_ready);
-        // if (result !== 32'h00000001 || zero !== 0 || alu_ready !== 1)
-        //     $display("❌ ERROR: Test 19 failed!");
-        // else
-        //     $display("✅ PASS");
-        
-        // // Test 20: REM operation (negative % negative)
-        // a = 32'hFFFFFFFC; // -4
-        // b = 32'hFFFFFFFE; // -2
-        // alu_ctrl = 4'b1010; // REM
-        // #10;
-        // $display("\nTest 20: REM (negative % negative)");
-        // $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-        //          a, b, alu_ctrl, result, zero, alu_ready);
-        // if (result !== 32'h00000000 || zero !== 1 || alu_ready !== 1) // 0
-        //     $display("❌ ERROR: Test 20 failed!");
-        // else
-        //     $display("✅ PASS");
-
-        // // Test 21: REM operation (negative % positive)
-        // a = 32'hFFFFFFFC; // -4
-        // b = 32'h00000003; // 3
-        // alu_ctrl = 4'b1010; // REM
-        // #10;
-        // $display("\nTest 21: REM (negative \% positive)");
-        // $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-        //          a, b, alu_ctrl, result, zero, alu_ready);
-        // if (result !== 32'hFFFFFFFF || zero !== 0 || alu_ready !== 1) // -1
-        //     $display("❌ ERROR: Test 21 failed!");
-        // else
-        //     $display("✅ PASS");
-
-        // // Test 22: DIVU operation (unsigned)
-        // a = 32'h0000000A;
-        // b = 32'h00000002;
-        // alu_ctrl = 4'b1011; // DIVU
-        // #10;
-        // $display("\nTest 22: DIVU (unsigned)");
-        // $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-        //          a, b, alu_ctrl, result, zero, alu_ready);
-        // if (result !== 32'h00000005 || zero !== 0 || alu_ready !== 1)
-        //     $display("❌ ERROR: Test 22 failed!");
-        // else
-        //     $display("✅ PASS");
-
-        // // Test 23: REMU operation (unsigned)
-        // a = 32'h0000000A;
-        // b = 32'h00000003;
-        // alu_ctrl = 4'b1100; // REMU
-        // #10;
-        // $display("\nTest 23: REMU (unsigned)");
-        // $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-        //          a, b, alu_ctrl, result, zero, alu_ready);
-        // if (result !== 32'h00000001 || zero !== 0 || alu_ready !== 1)
-        //     $display("❌ ERROR: Test 23 failed!");
-        // else
-        //     $display("✅ PASS");
-
-        // // Test 24: Division by zero (signed)
-        // a = 32'h0000000A;
-        // b = 32'h00000000;
-        // alu_ctrl = 4'b1001; // DIV
-        // #10;
-        // $display("\nTest 24: DIV (by zero)");
-        // $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-        //          a, b, alu_ctrl, result, zero, alu_ready);
-        // if (result !== 32'h00000000 || zero !== 1 || alu_ready !== 1)
-        //     $display("❌ ERROR: Test 24 failed!");
-        // else
-        //     $display("✅ PASS");
-
-        // // Test 25: Division by zero (unsigned)
-        // a = 32'h0000000A;
-        // b = 32'h00000000;
-        // alu_ctrl = 4'b1011; // DIVU
-        // #10;
-        // $display("\nTest 25: DIVU (by zero)");
-        // $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-        //          a, b, alu_ctrl, result, zero, alu_ready);
-        // if (result !== 32'h00000000 || zero !== 1 || alu_ready !== 1)
-        //     $display("❌ ERROR: Test 25 failed!");
-        // else
-        //     $display("✅ PASS");
-
-        // Test 26: Zero flag test
+        // Test 16: Zero flag test
         a = 32'h00000000;
         b = 32'h00000000;
         alu_ctrl = 4'b0000; // ADD
         #10;
-        $display("\nTest 26: Zero Flag Test");
+        $display("\nTest 16: Zero Flag Test");
         $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
                  a, b, alu_ctrl, result, zero, alu_ready);
         if (result !== 32'h00000000 || zero !== 1 || alu_ready !== 1)
-            $display("❌ ERROR: Test 26 failed!");
+            $display("❌ ERROR: Test 16 failed!");
         else
             $display("✅ PASS");
         
-        // Test 27: Incorrect ALU operation
+        // Test 17: Incorrect ALU operation
         a = 32'h00000005;
         b = 32'h00000005;
         alu_ctrl = 4'b1111; // Incorrect operation
         #10;
-        $display("\nTest 27: Incorrect ALU operation");
+        $display("\nTest 17: Incorrect ALU operation");
         $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
                  a, b, alu_ctrl, result, zero, alu_ready);
         if (result !== 32'h00000000 || zero !== 1 || alu_ready !== 1)
-            $display("❌ ERROR: Test 27 failed!");
+            $display("❌ ERROR: Test 17 failed!");
         else
             $display("✅ PASS");
 

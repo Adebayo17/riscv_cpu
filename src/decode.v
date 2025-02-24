@@ -29,9 +29,6 @@ module decode (
     
     assign funct7 = (opcode == R_TYPE_OPCODE) ? instr[31:25] : 7'b0000000;
 
-    // Immediate extraction for I-type (sign-extended)
-    // assign imm = (opcode == I_TYPE_OPCODE) ? {{20{instr[31]}}, instr[31:20]} : 32'b0;
-    // assign imm = {{20{instr[31]}}, instr[31:20]};
 
     always @(*) begin
         case (opcode)
@@ -55,37 +52,3 @@ module decode (
         endcase
     end
 endmodule
-
-
-
-// module decode (
-//     input  wire [31:0] instr,        // Full 32-bit instruction
-//     output wire [6:0]  opcode,       // Opcode
-//     output wire [4:0]  rs1, rs2, rd, // Register addresses (Source 1, Source 2, Destination)
-//     output wire [2:0]  funct3,       // Function field (R/I/S-type)
-//     output wire [6:0]  funct7,       // Function field (R-type)
-//     output wire [31:0] imm,          // Immediate value (for I, S, B-type)
-//     output wire        is_mul,       // Detect multiplication
-//     output wire        is_div,       // Detect division
-//     output wire        is_rem,       // Detect remainder
-//     output wire        is_divu,      // Detect division unsigned 
-//     output wire        is_remu       // Detect remainder unsigned
-// );
-
-//     assign opcode = instr[6:0];
-//     assign rd     = instr[11:7];
-//     assign funct3 = instr[14:12];
-//     assign rs1    = instr[19:15];
-//     assign rs2    = instr[24:20];
-//     assign funct7 = instr[31:25];
-
-//     // Immediate extraction for I-type (sign-extended)
-//     assign imm = {{20{instr[31]}}, instr[31:20]};
-
-//     // Detect multiplication, division, and remainder
-//     assign is_mul  = (opcode == 7'b0110011) && (funct3 == 3'b000) && (funct7 == 7'b0000001);
-//     assign is_div  = (opcode == 7'b0110011) && (funct3 == 3'b100) && (funct7 == 7'b0000001);
-//     assign is_rem  = (opcode == 7'b0110011) && (funct3 == 3'b110) && (funct7 == 7'b0000001);
-//     assign is_divu = (opcode == 7'b0110011) && (funct3 == 3'b101) && (funct7 == 7'b0000001);
-//     assign is_remu = (opcode == 7'b0110011) && (funct3 == 3'b111) && (funct7 == 7'b0000001);
-// endmodule
