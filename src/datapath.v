@@ -1,127 +1,367 @@
 module datapath (
-    input  wire clk, reset,          // Clock and reset signals
-    output wire [31:0] instr         // Instruction output (for debugging)
+    input  wire clk,                // Clock signal
+    input  wire reset_n,            // Asynchronous reset (active low)
+    input  wire debug,
+    output wire [31:0] instr        // Instruction output (for debugging)
 );
+    
+    // === PARAMETERS ===
+    localparam R_TYPE_OPCODE = 7'b0110011;
+    localparam I_TYPE_OPCODE = 7'b0010011;
+    localparam LOAD_OPCODE   = 7'b0000011;
+    localparam STORE_OPCODE  = 7'b0100011;
+    localparam BRANCH_OPCODE = 7'b1100011;
+    localparam JAL_OPCODE    = 7'b1101111;
+    localparam JALR_OPCODE   = 7'b1100111;
+    
+    // === WIRES ===
+    // Instance wires: program_memory0
+    wire [31:0] program_memory0__instr_out;
 
-    reg  [31:0] pc, next_pc;                                  // Program Counter (PC)
-    wire [31:0] reg_data1;                                    // Data signals
-    wire [31:0] reg_data2;                                    // Data signals
-    wire [31:0] alu_result;                                   // Data signals
-    wire [31:0] mem_data;                                     // Data signals
-    wire [6:0]  opcode;                                       // Extracted opcode
-    wire [4:0]  rs1;                                          // Register addresse
-    wire [4:0]  rs2;                                          // Register addresse
-    wire [4:0]  rd;                                           // Register addresse
-    wire [2:0]  funct3;                                       // Function code (funct3)
-    wire [6:0]  funct7;                                       // Function code (funct7)
-    wire [31:0] imm;                                          // Immediate value
+    // Instance wires: decoder
+    wire [31:0] decoder__instr  ;
+    wire [6:0]  decoder__opcode ;
+    wire [4:0]  decoder__rs1    ;
+    wire [4:0]  decoder__rs2    ;
+    wire [4:0]  decoder__rd     ;
+    wire [2:0]  decoder__funct3 ;
+    wire [6:0]  decoder__funct7 ;
+    wire [31:0] decoder__imm    ;
 
-    // Control signals
-    wire reg_write;
-    wire alu_src;
-    wire mem_write;
-    wire mem_read;
-    wire mem_to_reg;
-    wire branch;
-    reg  [3:0] alu_ctrl;
+    // Instance wires: ctrl_unit
+    wire [6:0]  ctrl_unit__opcode     ;
+    wire        ctrl_unit__reg_write  ;
+    wire        ctrl_unit__alu_src    ;
+    wire        ctrl_unit__mem_write  ;
+    wire        ctrl_unit__mem_read   ;
+    wire        ctrl_unit__mem_to_reg ;
+    wire        ctrl_unit__branch     ;
+    wire        ctrl_unit__jump       ;
 
-    // Program Counter (PC) logic
-    always @(posedge clk or posedge reset) begin
-        if (reset)
+    // Instance wires: registers
+    wire        registers__write_enable ;
+    wire [4:0]  registers__read_addr_1  ;
+    wire [4:0]  registers__read_addr_2  ;
+    wire [4:0]  registers__write_addr   ;
+    wire [31:0] registers__write_data   ;
+    wire [31:0] registers__read_data_1  ;
+    wire [31:0] registers__read_data_2  ;
+
+    reg  [3:0]  alu_ctrl_calculated;
+
+    // Instance wires: alu_unit
+    wire [31:0] alu_unit__a        ;
+    wire [31:0] alu_unit__b        ;
+    wire [3:0]  alu_unit__alu_ctrl ;
+    wire [31:0] alu_unit__result   ;
+    wire        alu_unit__zero     ;
+    wire        alu_unit__alu_ready;
+
+    // Instance wires: data_memory
+    wire        data_memory0__mem_write   ;
+    wire        data_memory0__mem_read    ;
+    wire [31:0] data_memory0__data_addr   ;
+    wire [31:0] data_memory0__write_data  ;
+    wire [31:0] data_memory0__read_data   ;
+
+
+    // === PROGRAM COUNTER ===
+    reg  [31:0] pc, next_pc;
+
+    // === PIPELINE REGISTERS ===
+    // IF to ID
+    reg  [31:0] IF_to_ID_instr;
+
+    // ID to EX
+    reg  [31:0] ID_to_EX_read_data_1;
+    reg  [31:0] ID_to_EX_read_data_2;
+    reg  [31:0] ID_to_EX_imm;
+    reg  [4:0]  ID_to_EX_rd;
+    reg  [3:0]  ID_to_EX_alu_ctrl;
+    reg         ID_to_EX_alu_src;
+    reg         ID_to_EX_alu_ready;
+    reg         ID_to_EX_branch;
+    reg         ID_to_EX_jump;
+    reg         ID_to_EX_mem_read;
+    reg         ID_to_EX_mem_write;
+    reg         ID_to_EX_reg_write;
+    reg         ID_to_EX_mem_to_reg;
+
+    // EX to MEM
+    reg  [31:0] EX_to_MEM_alu_result;
+    reg  [31:0] EX_to_MEM_read_data_2;
+    reg  [4:0]  EX_to_MEM_rd;
+    reg         EX_to_MEM_mem_read;
+    reg         EX_to_MEM_mem_write;
+    reg         EX_to_MEM_reg_write;
+    reg         EX_to_MEM_mem_to_reg;
+
+    // MEM to WB
+    reg  [31:0] MEM_to_WB_alu_result;
+    reg  [31:0] MEM_to_WB_mem_data;
+    reg  [4:0]  MEM_to_WB_rd;
+    reg         MEM_to_WB_reg_write;
+    reg         MEM_to_WB_mem_to_reg;
+
+
+    // ==============================
+    // === INSTRUCTION FETCH (IF) ===
+    // ==============================
+    always @(posedge clk or negedge reset_n) begin
+        if (!reset_n) begin
             pc <= 32'h00000000;
-        else
+        end else begin
+            // $display("🔍 (datapath) PC Update: Previous PC = %h → Next PC = %h", pc, next_pc);
             pc <= next_pc;
+        end
+    end 
 
-            // Debug: Print executed instruction and register values
-            $display("PC: %h | Instruction: %h", pc, instr);
-            $display("Reg x1: %h | Reg x2: %h | Reg x3: %h | Reg x4: %h | Reg x5: %h | Reg x6: %h | Reg x7: %h",
-                    registers.registers[1], registers.registers[2], registers.registers[3],
-                    registers.registers[4], registers.registers[5], registers.registers[6], registers.registers[7]);
+    program_memory program_memory0 (
+        .debug              (debug                          ),
+        .pc                 (pc                             ),  // Pass PC for instruction fetch
+        .instr_out          (program_memory0__instr_out     )   // Fetch instruction
+    );
 
-            // Debug: Print memory updates
-            if (mem_write)
-                $display("Memory Write: Addr %h = %h", alu_result, reg_data2);
-            if (mem_read)
-                $display("Memory Read: Addr %h -> %h", alu_result, mem_data);
-
-            $display("----------------------------");
+    always @(posedge clk or negedge reset_n) begin
+        if (!reset_n) begin
+            IF_to_ID_instr  <= 0;
+        end else begin
+            //$display("🔍 (datapth) IF/ID Pipeline: Storing instr = %h (PC = %h)", program_memory0__instr_out, pc);
+            IF_to_ID_instr  <= program_memory0__instr_out;
+        end
     end
 
-    // Instruction Memory (simple ROM model)
-    reg [31:0] instr_mem [0:31];
-    initial begin
-        $readmemh("sim/program.mem", instr_mem);    // Load program into memory
-    end 
-    assign instr = instr_mem[pc >> 2];          // Fetch instruction
+    // Datapath instruction output
+    assign instr = program_memory0__instr_out;
 
-    // Decode instruction fields
+
+    // ===============================
+    // === INSTRUCTION DECODE (ID) ===
+    // ===============================
+
+    assign decoder__instr = IF_to_ID_instr;
+
     decode decoder (
-        .instr(instr),
-        .opcode(opcode),
-        .rs1(rs1),
-        .rs2(rs2),
-        .rd(rd),
-        .funct3(funct3),
-        .funct7(funct7),
-        .imm(imm)
+        .instr              (decoder__instr     ),
+        .opcode             (decoder__opcode    ),
+        .rs1                (decoder__rs1       ),
+        .rs2                (decoder__rs2       ),
+        .rd                 (decoder__rd        ),
+        .funct3             (decoder__funct3    ),
+        .funct7             (decoder__funct7    ),
+        .imm                (decoder__imm       )
     );
 
-    // Control Unit
     control ctrl_unit (
-        .opcode(opcode),
-        .reg_write(reg_write),
-        .alu_src(alu_src),
-        .mem_write(mem_write),
-        .mem_read(mem_read),
-        .mem_to_reg(mem_to_reg),
-        .branch(branch)
+        .opcode             (ctrl_unit__opcode      ),
+        .reg_write          (ctrl_unit__reg_write   ),
+        .alu_src            (ctrl_unit__alu_src     ),
+        .mem_write          (ctrl_unit__mem_write   ),
+        .mem_read           (ctrl_unit__mem_read    ),
+        .mem_to_reg         (ctrl_unit__mem_to_reg  ),
+        .branch             (ctrl_unit__branch      ),
+        .jump               (ctrl_unit__jump        )
     );
 
-    // Register File
+
     regfile registers (
-        .clk(clk),
-        .we(reg_write),
-        .rs1(rs1),
-        .rs2(rs2),
-        .rd(rd),
-        .wd(mem_to_reg ? mem_data : alu_result),
-        .rd1(reg_data1),
-        .rd2(reg_data2)
+        .clk                (clk            ),
+        .write_enable       (registers__write_enable ),
+        .read_addr_1        (registers__read_addr_1  ),
+        .read_addr_2        (registers__read_addr_2  ),
+        .write_addr         (registers__write_addr   ),
+        .write_data         (registers__write_data   ),
+        .read_data_1        (registers__read_data_1  ),
+        .read_data_2        (registers__read_data_2  )
     );
 
-    // ALU Control Unit (determines ALU operation based on funct3 and funct7)
+    assign ctrl_unit__opcode        = decoder__opcode;
+    assign registers__read_addr_1   = decoder__rs1;
+    assign registers__read_addr_2   = decoder__rs2;
+
+    // TO COMPLETE
     always @(*) begin
-        case (funct3)
-            3'b000: alu_ctrl = (funct7 == 7'b0100000) ? 4'b0001 : 4'b0000; // SUB or ADD
-            3'b100: alu_ctrl = 4'b0100; // XOR
-            3'b110: alu_ctrl = 4'b0011; // OR
-            3'b111: alu_ctrl = 4'b0010; // AND
-            default: alu_ctrl = 4'b0000; // Default to ADD
+        case ({decoder__opcode, decoder__funct7, decoder__funct3})
+            // R-type instructions
+            {R_TYPE_OPCODE, 7'b0000000, 3'b000}: alu_ctrl_calculated = 4'b0000; // ADD
+            {R_TYPE_OPCODE, 7'b0100000, 3'b000}: alu_ctrl_calculated = 4'b0001; // SUB
+            {R_TYPE_OPCODE, 7'b0000000, 3'b111}: alu_ctrl_calculated = 4'b0010; // AND
+            {R_TYPE_OPCODE, 7'b0000000, 3'b110}: alu_ctrl_calculated = 4'b0011; // OR
+            {R_TYPE_OPCODE, 7'b0000000, 3'b100}: alu_ctrl_calculated = 4'b0100; // XOR
+            {R_TYPE_OPCODE, 7'b0000000, 3'b001}: alu_ctrl_calculated = 4'b0101; // SLL
+            {R_TYPE_OPCODE, 7'b0000000, 3'b101}: alu_ctrl_calculated = 4'b0110; // SRL
+            {R_TYPE_OPCODE, 7'b0100000, 3'b101}: alu_ctrl_calculated = 4'b0111; // SRA
+            {R_TYPE_OPCODE, 7'b0000001, 3'b000}: alu_ctrl_calculated = 4'b1000; // MUL
+            // {R_TYPE_OPCODE, 7'b0000001, 3'b100}: alu_ctrl_calculated = 4'b1001; // DIV
+            // {R_TYPE_OPCODE, 7'b0000001, 3'b110}: alu_ctrl_calculated = 4'b1010; // REM
+            // {R_TYPE_OPCODE, 7'b0000001, 3'b101}: alu_ctrl_calculated = 4'b1011; // DIVU
+            // {R_TYPE_OPCODE, 7'b0000001, 3'b111}: alu_ctrl_calculated = 4'b1100; // REMU
+
+            // I-type instructions
+            {I_TYPE_OPCODE, 7'b0000000, 3'b000}: alu_ctrl_calculated = 4'b0000; // ADDI
+            {I_TYPE_OPCODE, 7'b0000000, 3'b111}: alu_ctrl_calculated = 4'b0010; // ANDI
+            {I_TYPE_OPCODE, 7'b0000000, 3'b110}: alu_ctrl_calculated = 4'b0011; // ORI
+            {I_TYPE_OPCODE, 7'b0000000, 3'b100}: alu_ctrl_calculated = 4'b0100; // XORI
+            {I_TYPE_OPCODE, 7'b0000000, 3'b001}: alu_ctrl_calculated = 4'b0101; // SLLI
+            {I_TYPE_OPCODE, 7'b0000000, 3'b101}: alu_ctrl_calculated = 4'b0110; // SRLI
+            {I_TYPE_OPCODE, 7'b0100000, 3'b101}: alu_ctrl_calculated = 4'b0111; // SRAI 
+
+            // Load and Store instructions
+            {LOAD_OPCODE,   7'b0000000, 3'b000}: alu_ctrl_calculated = 4'b0000; // LW (use ADD for address calculation)
+            {STORE_OPCODE,  7'b0000000, 3'b000}: alu_ctrl_calculated = 4'b0000; // SW (use ADD for address calculation)
+
+            // Branch instructions
+            {BRANCH_OPCODE, 7'b0000000, 3'b000}: alu_ctrl_calculated = 4'b0001; // BEQ (use SUB for comparison)
+            {BRANCH_OPCODE, 7'b0000000, 3'b001}: alu_ctrl_calculated = 4'b0001; // BNE (use SUB for comparison)
+            {BRANCH_OPCODE, 7'b0000000, 3'b100}: alu_ctrl_calculated = 4'b0001; // BLT (use SUB for comparison)
+            {BRANCH_OPCODE, 7'b0000000, 3'b101}: alu_ctrl_calculated = 4'b0001; // BGE (use SUB for comparison)
+            {BRANCH_OPCODE, 7'b0000000, 3'b110}: alu_ctrl_calculated = 4'b0001; // BLTU (use SUB for comparison)
+            {BRANCH_OPCODE, 7'b0000000, 3'b111}: alu_ctrl_calculated = 4'b0001; // BGEU (use SUB for comparison)
+
+            // Jump instructions
+            {JAL_OPCODE,    7'b0000000, 3'b000}: alu_ctrl_calculated = 4'b0000; // JAL (use ADD for address calculation)
+            {JALR_OPCODE,   7'b0000000, 3'b000}: alu_ctrl_calculated = 4'b0000; // JALR (use ADD for address calculation)
+
+            default: alu_ctrl_calculated = 4'b0000; // Default to ADD
         endcase
     end
 
-    // ALU
+    always @(posedge clk or negedge reset_n) begin
+        if (!reset_n) begin
+            ID_to_EX_rd          <= 0;
+            ID_to_EX_imm         <= 0;
+
+            ID_to_EX_read_data_1 <= 0;
+            ID_to_EX_read_data_2 <= 0;
+
+            ID_to_EX_alu_ctrl    <= 0;
+            ID_to_EX_alu_src     <= 0;
+            ID_to_EX_branch      <= 0;
+            ID_to_EX_jump        <= 0;
+
+            ID_to_EX_mem_read    <= 0;
+            ID_to_EX_mem_write   <= 0;
+            ID_to_EX_reg_write   <= 0;
+            ID_to_EX_mem_to_reg  <= 0;
+        end else begin
+            ID_to_EX_rd          <= decoder__rd;
+            ID_to_EX_imm         <= decoder__imm;
+            ID_to_EX_read_data_1 <= registers__read_data_1;
+            ID_to_EX_read_data_2 <= registers__read_data_2;
+            ID_to_EX_alu_ctrl    <= alu_ctrl_calculated;
+            ID_to_EX_alu_src     <= ctrl_unit__alu_src;
+            ID_to_EX_branch      <= ctrl_unit__branch;
+            ID_to_EX_jump        <= ctrl_unit__jump; 
+            ID_to_EX_mem_read    <= ctrl_unit__mem_read;
+            ID_to_EX_mem_write   <= ctrl_unit__mem_write;
+            ID_to_EX_reg_write   <= ctrl_unit__reg_write;
+            ID_to_EX_mem_to_reg  <= ctrl_unit__mem_to_reg;
+        end
+    end 
+
+
+
+    // =======================
+    // === EXECUTION (EX) ===
+    // ======================
+
+    assign alu_unit__a          = ID_to_EX_read_data_1;
+    assign alu_unit__b          = (ID_to_EX_alu_src) ? ID_to_EX_imm : ID_to_EX_read_data_2;
+    assign alu_unit__alu_ctrl   = ID_to_EX_alu_ctrl;
+
+    // ALU Unit
     alu alu_unit (
-        .a(reg_data1),
-        .b(alu_src ? imm : reg_data2),
-        .alu_ctrl(alu_ctrl),
-        .result(alu_result),
-        .zero()
+        .a                  (alu_unit__a        ),
+        .b                  (alu_unit__b        ),
+        .alu_ctrl           (alu_unit__alu_ctrl ),
+        .result             (alu_unit__result   ),
+        .zero               (alu_unit__zero     ),
+        .alu_ready          (alu_unit__alu_ready)
     );
 
-    // Data Memory
-    reg [31:0] data_mem [0:31];  // Simple memory model
-    always @(posedge clk) begin
-        if (mem_write)
-            data_mem[alu_result >> 2] <= reg_data2;
-    end
-    assign mem_data = mem_read ? data_mem[alu_result >> 2] : 32'b0;
-
-    // PC Update Logic (Handles Jumps and Branches)
+    // Branch and Jump Logic
     always @(*) begin
-        if (branch && alu_result == 0)
-            next_pc = pc + (imm << 1);
-        else
+        if (ID_to_EX_jump && (decoder__opcode == JALR_OPCODE)) begin
+            // JALR: PC = rs1 + imm (with LSB set to 0)
+            next_pc = (ID_to_EX_read_data_1 + ID_to_EX_imm) & ~32'b1;
+        end else if (ID_to_EX_branch && alu_unit__zero) begin
+            // Branch taken: PC = PC + imm
+            next_pc = pc + ID_to_EX_imm;
+        end else if (ID_to_EX_jump) begin
+            // JAL: PC = PC + imm
+            next_pc = pc + ID_to_EX_imm;
+        end else begin
+            // Default: PC = PC + 4
             next_pc = pc + 4;
+        end
     end
+
+    always @(posedge clk or negedge reset_n) begin
+        if (!reset_n) begin
+            EX_to_MEM_alu_result    <= 0;
+            EX_to_MEM_read_data_2   <= 0;
+            EX_to_MEM_rd            <= 0;
+            EX_to_MEM_mem_read      <= 0;
+            EX_to_MEM_mem_write     <= 0;
+            EX_to_MEM_reg_write     <= 0;
+            EX_to_MEM_mem_to_reg    <= 0;
+        end else begin
+            EX_to_MEM_alu_result    <= alu_unit__result;
+            EX_to_MEM_read_data_2   <= ID_to_EX_read_data_2;
+            EX_to_MEM_rd            <= ID_to_EX_rd;
+            EX_to_MEM_mem_read      <= ID_to_EX_mem_read;
+            EX_to_MEM_mem_write     <= ID_to_EX_mem_write;
+            EX_to_MEM_reg_write     <= ID_to_EX_reg_write;
+            EX_to_MEM_mem_to_reg    <= ID_to_EX_mem_to_reg;
+        end
+    end
+
+    // =====================
+    // === MEMORY (MEM) ===
+    // ====================
+
+    assign data_memory0__mem_write  = EX_to_MEM_mem_write;
+    assign data_memory0__mem_read   = EX_to_MEM_mem_read;
+    assign data_memory0__data_addr  = EX_to_MEM_alu_result;
+    assign data_memory0__write_data = EX_to_MEM_read_data_2;
+
+    data_memory data_memory0 (
+        .clk                (clk                        ),
+        .reset_n            (reset_n                    ),
+        .debug              (debug                      ),
+        .mem_write          (data_memory0__mem_write    ),
+        .mem_read           (data_memory0__mem_read     ),
+        .data_addr          (data_memory0__data_addr    ),
+        .write_data         (data_memory0__write_data   ),
+        .read_data          (data_memory0__read_data    )
+    );
+
+    always @(posedge clk or negedge reset_n) begin
+        if (!reset_n) begin
+            MEM_to_WB_alu_result   <= 0;
+            MEM_to_WB_mem_data     <= 0;
+            MEM_to_WB_rd           <= 0;
+            MEM_to_WB_reg_write    <= 0;
+            MEM_to_WB_mem_to_reg   <= 0;
+        end else begin
+            MEM_to_WB_alu_result   <= EX_to_MEM_alu_result;
+            MEM_to_WB_mem_data     <= data_memory0__read_data;
+            MEM_to_WB_rd           <= EX_to_MEM_rd;
+            MEM_to_WB_reg_write    <= EX_to_MEM_reg_write;
+            MEM_to_WB_mem_to_reg   <= EX_to_MEM_mem_to_reg;
+        end
+    end
+
+    // ======================
+    // === WRITEBACK (WB) ===
+    // ======================
+
+    // Writeback Mux
+    assign registers__write_data    =   (MEM_to_WB_mem_to_reg) ? MEM_to_WB_mem_data : 
+                                        (ID_to_EX_jump) ? (pc + 4) :  MEM_to_WB_alu_result;
+    
+    // Write to Register File
+    assign registers__write_enable  = MEM_to_WB_reg_write;
+    assign registers__write_addr    = MEM_to_WB_rd;
+
 endmodule

@@ -1,19 +1,31 @@
+// =======================================
+// program_1.mem – Basic Arithmetic & Logic Tests
+// =======================================
+
 // Initialize registers
 00100093  // ADDI x1, x0, 1   -> x1 = x0 + 1  (x1 = 1)
 00200113  // ADDI x2, x0, 2   -> x2 = x0 + 2  (x2 = 2)
+00300193  // ADDI x3, x0, 3   -> x3 = x0 + 3  (x3 = 3)
+00400213  // ADDI x4, x0, 4   -> x4 = x0 + 4  (x4 = 4)
 
-// Perform arithmetic operation
-002081b3  // ADD x3, x1, x2   -> x3 = x1 + x2  (x3 = 1 + 2 = 3)
+// Arithmetic
+002081B3  // ADD x3, x1, x2   -> x3 = x1 + x2 = 3
+40210233  // SUB x4, x2, x1   -> x4 = x2 - x1 = 1
 
-00000000  // NOP (Padding)
-00000000  // NOP (Padding)
-00000000  // NOP (Padding)
-00000000  // NOP (Padding)
-00000000  // NOP (Padding)
-00000000  // NOP (Padding)
-00000000  // NOP (Padding)
-00000000  // NOP (Padding)
-00000000  // NOP (Padding)
+// Logical Operations
+0031F2B3  // AND x5, x3, x3   -> x5 = x3 & x3 = 3
+0031E333  // OR x6, x3, x3    -> x6 = x3 | x3 = 3
+0031C3B3  // XOR x7, x3, x3   -> x7 = x3 ^ x3 = 0
+
+// Shift Operations
+002092B3  // SLL x5, x1, x2   -> x5 = x1 << x2  (1 << 2 = 4)
+0020D333  // SRL x6, x1, x2   -> x6 = x1 >> x2  (1 >> 2 = 0)
+4020D3B3  // SRA x7, x1, x2   -> x7 = x1 >> x2 (Arithmetic)
+
+// =======================================
+// End of Program
+// =======================================
+
 00000000  // NOP (Padding)
 00000000  // NOP (Padding)
 00000000  // NOP (Padding)

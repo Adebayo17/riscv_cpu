@@ -1,0 +1,54 @@
+// =======================================
+// program_4.mem – Branching & Jump Tests
+// =======================================
+
+// Initialize registers
+00100093  // ADDI x1, x0, 1   (x1 = 1)
+00200113  // ADDI x2, x0, 2   (x2 = 2)
+
+// BEQ (Branch if Equal - should NOT branch)
+00208863  // BEQ x1, x2, 16   (If x1 == x2, PC += 16)
+
+// BNE (Branch if Not Equal - should branch)
+0020C463  // BNE x1, x2, 8    (If x1 != x2, PC += 8)
+
+// BLT (Branch if Less Than - should branch)
+0020D463  // BLT x1, x2, 8    (If x1 < x2, PC += 8)
+
+// BGE (Branch if Greater or Equal - should NOT branch)
+0020E463  // BGE x1, x2, 8    (If x1 >= x2, PC += 8)
+
+// JAL (Jump and Link)
+0100026F  // JAL x5, 16       (Jump forward 16 bytes)
+
+// JALR (Jump to Register)
+00008067  // JALR x0, 0(x1)   (Jump to x1)
+
+// =======================================
+// End of Program
+// =======================================
+
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
+00000000  // NOP (Padding)
