@@ -319,6 +319,7 @@ module datapath (
     );
 
     // Branch and Jump Targets
+    // branch_target next_pc = ID_to_EX_pc + ID_to_EX_imm;
     assign branch_target = ID_to_EX_pc + ID_to_EX_imm;
 
     // Branch and Jump Logic
@@ -329,7 +330,6 @@ module datapath (
             pipeline_flush = 1; // Flush pipeline
         end else if (ID_to_EX_branch) begin
             // Branch taken: PC = PC + imm
-            // branch_target = ID_to_EX_pc + ID_to_EX_imm;
             case (ID_to_EX_funct3)
                 3'b000: begin
                     next_pc = (alu_unit__zero) ? branch_target : pc + 4; // BEQ

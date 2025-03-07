@@ -24,17 +24,15 @@ TB_FILES = $(SIM_DIR)/alu_tb.v $(SIM_DIR)/regfile_tb.v $(SIM_DIR)/control_tb.v $
 VCD_FILE = $(WAVE_DIR)/cpu.vcd
 TB_OUT   = $(SIM_OUT_DIR)/cpu_tb.out
 MEM_FILE = $(SIM_DIR)/program.mem
-MEM_RESULT_FILE = $(SIM_DIR)/expected_results.mem
 
 # Default program number (if not specified)
-PROGRAM ?= 1
+PROGRAM ?= 0
 
 # Select test program by creating a symbolic link
 select_program:
 	@echo "📄 Copying program_$(PROGRAM).mem to sim/program.mem..."
-	@rm -f $(MEM_FILE) $(MEM_RESULT_FILE)
+	@rm -f $(MEM_FILE)
 	@cp -rf $(PROG_DIR)/program_$(PROGRAM).mem $(MEM_FILE)
-#	@cp -rf $(PROG_DIR)/expected_results_$(PROGRAM).mem $(MEM_RESULT_FILE)
 
 # Compilation rule: Compile Verilog sources into simulation binary
 compile: select_program
@@ -54,61 +52,55 @@ wave: $(VCD_FILE)
 ########################################################################################
 # FPGA Synthesis
 ########################################################################################
-synth:
-	@echo "🔧 Synthesizing for FPGA..."
-	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top cpu; write_json synth/cpu.json; write_blif synth/cpu.blif"
-	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top datapath; write_json synth/datapath.json; write_blif synth/datapath.blif"
-	netlistsvg synth/cpu.json -o synth/cpu.svg
-	netlistsvg synth/datapath.json -o synth/datapath.svg
 
 synth_all: synth_cpu synth_datapath synth_alu synth_regfile synth_control synth_decode synth_data_memory synth_program_memory
 
 synth_cpu:
 	@echo "🔧 Synthesizing CPU for FPGA..."
 	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top cpu; write_json $(SYNTH)/cpu.json; write_blif $(SYNTH)/cpu.blif"
-	netlistsvg synth/cpu.json -o synth/cpu.svg
+	netlistsvg $(SYNTH)/cpu.json -o $(SYNTH)/cpu.svg
 
 synth_datapath:
 	@echo "🔧 Synthesizing Datapath for FPGA..."
 	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top datapath; write_json $(SYNTH)/datapath.json; write_blif $(SYNTH)/datapath.blif"
-	netlistsvg synth/datapath.json -o synth/datapath.svg
+	netlistsvg $(SYNTH)/datapath.json -o $(SYNTH)/datapath.svg
 
 synth_alu:
 	@echo "🔧 Synthesizing ALU for FPGA..."
-	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_DIR)/alu.v; synth -top alu; write_json $(SYNTH)/alu.json; write_blif $(SYNTH)/alu.blif"
-	netlistsvg synth/alu.json -o synth/alu.svg
+	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top alu; write_json $(SYNTH)/alu.json; write_blif $(SYNTH)/alu.blif"
+	netlistsvg $(SYNTH)/alu.json -o $(SYNTH)/alu.svg
 
 synth_regfile:
 	@echo "🔧 Synthesizing Regfile for FPGA..."
 	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top regfile; write_json $(SYNTH)/regfile.json; write_blif $(SYNTH)/regfile.blif"
-	netlistsvg synth/regfile.json -o synth/regfile.svg
+	netlistsvg $(SYNTH)/regfile.json -o $(SYNTH)/regfile.svg
 
 synth_control:
 	@echo "🔧 Synthesizing Control for FPGA..."
 	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top control; write_json $(SYNTH)/control.json; write_blif $(SYNTH)/control.blif"
-	netlistsvg synth/control.json -o synth/control.svg
+	netlistsvg $(SYNTH)/control.json -o $(SYNTH)/control.svg
 
 synth_decode:
 	@echo "🔧 Synthesizing Decode for FPGA..."
 	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top decode; write_json $(SYNTH)/decode.json; write_blif $(SYNTH)/decode.blif"
-	netlistsvg synth/decode.json -o synth/decode.svg
+	netlistsvg $(SYNTH)/decode.json -o $(SYNTH)/decode.svg
 
 synth_data_memory:
 	@echo "🔧 Synthesizing Data Memory for FPGA..."
 	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top data_memory; write_json $(SYNTH)/data_memory.json; write_blif $(SYNTH)/data_memory.blif"
-	netlistsvg synth/data_memory.json -o synth/data_memory.svg
+	netlistsvg $(SYNTH)/data_memory.json -o $(SYNTH)/data_memory.svg
 
 synth_program_memory:
 	@echo "🔧 Synthesizing Program Memory for FPGA..."
 	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top program_memory; write_json $(SYNTH)/program_memory.json; write_blif $(SYNTH)/program_memory.blif"
-	netlistsvg synth/program_memory.json -o synth/program_memory.svg
+	netlistsvg $(SYNTH)/program_memory.json -o $(SYNTH)/program_memory.svg
 
 ########################################################################################
 # FPGA Place & Route
 ########################################################################################
 route: synth
 	@echo "📌 Running placement & routing..."
-	$(NEXTPNR) --hx8k --package tq144 --json cpu.json --pcf constraints.pcf --asc cpu.asc
+	$(NEXTPNR) --hx8k --package tq144 --json $(SYNTH)/cpu.json --pcf constraints.pcf --asc $(SYNTH)/cpu.asc
 
 
 ########################################################################################
@@ -116,8 +108,10 @@ route: synth
 ########################################################################################
 clean:
 	@echo "🧹 Cleaning up..."
-	rm -f $(TB_OUT) $(VCD_FILE) cpu.blif cpu.json cpu.asc
-	rm -rf $(SIM_OUT_DIR)/*.out $(WAVE_DIR)/*.vcd $(SIM_OUT_DIR)/*.log
+	rm -rf $(TB_OUT) $(VCD_FILE)
+	rm -rf $(WAVE_DIR)/*.vcd
+	rm -rf $(SIM_OUT_DIR)/*.out  $(SIM_OUT_DIR)/*.log 
+	rm -rf $(SYNTH)/*.json $(SYNTH)/*.blif $(SYNTH)/*.asc $(SYNTH)/*.svg
 
 ########################################################################################
 # Default target
@@ -125,10 +119,8 @@ clean:
 all: compile simulate wave
 
 ########################################################################################
-# Test target
+# Test target : Run a test program by specifying PROGRAM=<num>
 ########################################################################################
-
-# Run a test program by specifying PROGRAM=<num>
 test: select_program simulate wave
 	@echo "✅ Test completed for program_$(PROGRAM).mem!"
 
