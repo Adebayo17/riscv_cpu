@@ -11,11 +11,14 @@ SIM_DIR 	= sim
 SIM_OUT_DIR = sim_out
 PROG_DIR 	= programs
 WAVE_DIR 	= wave
+SYNTH       = synth
 
 # Source files
 SRC_FILES = $(SRC_DIR)/cpu.v $(SRC_DIR)/datapath.v $(SRC_DIR)/decode.v $(SRC_DIR)/data_memory.v $(SRC_DIR)/program_memory.v \
-            $(SRC_DIR)/control.v $(SRC_DIR)/regfile.v $(SRC_DIR)/alu.v $(SRC_DIR)/memory.v  \
-            $(SIM_DIR)/cpu_tb.v
+            $(SRC_DIR)/control.v $(SRC_DIR)/regfile.v $(SRC_DIR)/alu.v
+            
+TB_FILES = $(SIM_DIR)/alu_tb.v $(SIM_DIR)/regfile_tb.v $(SIM_DIR)/control_tb.v $(SIM_DIR)/decode_tb.v $(SIM_DIR)/data_memory_tb.v \
+		   $(SIM_DIR)/program_memory_tb.v $(SIM_DIR)/datapath_tb.v $(SIM_DIR)/cpu_tb.v
 
 # Output files
 VCD_FILE = $(WAVE_DIR)/cpu.vcd
@@ -31,12 +34,12 @@ select_program:
 	@echo "📄 Copying program_$(PROGRAM).mem to sim/program.mem..."
 	@rm -f $(MEM_FILE) $(MEM_RESULT_FILE)
 	@cp -rf $(PROG_DIR)/program_$(PROGRAM).mem $(MEM_FILE)
-	@cp -rf $(PROG_DIR)/expected_results_$(PROGRAM).mem $(MEM_RESULT_FILE)
+#	@cp -rf $(PROG_DIR)/expected_results_$(PROGRAM).mem $(MEM_RESULT_FILE)
 
 # Compilation rule: Compile Verilog sources into simulation binary
 compile: select_program
 	@echo "🔨 Compiling Verilog source files..."
-	$(IVERILOG) -o $(TB_OUT) $(SRC_FILES)
+	$(IVERILOG) -o $(TB_OUT) $(SRC_FILES) $(TB_FILES)
 
 # Simulation rule: Run the testbench
 simulate: compile
@@ -48,28 +51,91 @@ wave: $(VCD_FILE)
 	@echo "📊 Opening GTKWave..."
 	$(GTK) $(VCD_FILE) &
 
-# FPGA Synthesis using Yosys
+########################################################################################
+# FPGA Synthesis
+########################################################################################
 synth:
 	@echo "🔧 Synthesizing for FPGA..."
-	$(YOSYS) -p "read_verilog $(SRC_DIR)/cpu.v; synth_ice40 -top cpu; write_blif cpu.blif"
+	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top cpu; write_json synth/cpu.json; write_blif synth/cpu.blif"
+	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top datapath; write_json synth/datapath.json; write_blif synth/datapath.blif"
+	netlistsvg synth/cpu.json -o synth/cpu.svg
+	netlistsvg synth/datapath.json -o synth/datapath.svg
 
-# FPGA Place & Route using NextPNR
+synth_all: synth_cpu synth_datapath synth_alu synth_regfile synth_control synth_decode synth_data_memory synth_program_memory
+
+synth_cpu:
+	@echo "🔧 Synthesizing CPU for FPGA..."
+	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top cpu; write_json $(SYNTH)/cpu.json; write_blif $(SYNTH)/cpu.blif"
+	netlistsvg synth/cpu.json -o synth/cpu.svg
+
+synth_datapath:
+	@echo "🔧 Synthesizing Datapath for FPGA..."
+	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top datapath; write_json $(SYNTH)/datapath.json; write_blif $(SYNTH)/datapath.blif"
+	netlistsvg synth/datapath.json -o synth/datapath.svg
+
+synth_alu:
+	@echo "🔧 Synthesizing ALU for FPGA..."
+	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_DIR)/alu.v; synth -top alu; write_json $(SYNTH)/alu.json; write_blif $(SYNTH)/alu.blif"
+	netlistsvg synth/alu.json -o synth/alu.svg
+
+synth_regfile:
+	@echo "🔧 Synthesizing Regfile for FPGA..."
+	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top regfile; write_json $(SYNTH)/regfile.json; write_blif $(SYNTH)/regfile.blif"
+	netlistsvg synth/regfile.json -o synth/regfile.svg
+
+synth_control:
+	@echo "🔧 Synthesizing Control for FPGA..."
+	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top control; write_json $(SYNTH)/control.json; write_blif $(SYNTH)/control.blif"
+	netlistsvg synth/control.json -o synth/control.svg
+
+synth_decode:
+	@echo "🔧 Synthesizing Decode for FPGA..."
+	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top decode; write_json $(SYNTH)/decode.json; write_blif $(SYNTH)/decode.blif"
+	netlistsvg synth/decode.json -o synth/decode.svg
+
+synth_data_memory:
+	@echo "🔧 Synthesizing Data Memory for FPGA..."
+	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top data_memory; write_json $(SYNTH)/data_memory.json; write_blif $(SYNTH)/data_memory.blif"
+	netlistsvg synth/data_memory.json -o synth/data_memory.svg
+
+synth_program_memory:
+	@echo "🔧 Synthesizing Program Memory for FPGA..."
+	$(YOSYS) -p "read_verilog -DSYNTHESIS $(SRC_FILES); synth -top program_memory; write_json $(SYNTH)/program_memory.json; write_blif $(SYNTH)/program_memory.blif"
+	netlistsvg synth/program_memory.json -o synth/program_memory.svg
+
+########################################################################################
+# FPGA Place & Route
+########################################################################################
 route: synth
 	@echo "📌 Running placement & routing..."
 	$(NEXTPNR) --hx8k --package tq144 --json cpu.json --pcf constraints.pcf --asc cpu.asc
 
+
+########################################################################################
 # Clean generated files
+########################################################################################
 clean:
 	@echo "🧹 Cleaning up..."
 	rm -f $(TB_OUT) $(VCD_FILE) cpu.blif cpu.json cpu.asc
+	rm -rf $(SIM_OUT_DIR)/*.out $(WAVE_DIR)/*.vcd $(SIM_OUT_DIR)/*.log
 
+########################################################################################
 # Default target
+########################################################################################
 all: compile simulate wave
+
+########################################################################################
+# Test target
+########################################################################################
 
 # Run a test program by specifying PROGRAM=<num>
 test: select_program simulate wave
 	@echo "✅ Test completed for program_$(PROGRAM).mem!"
 
+
+########################################################################################
+# Simulation targets
+########################################################################################
 
 # Simulate ALU module
 sim_alu:
@@ -126,35 +192,60 @@ sim_program_memory:
 	$(GTK) $(WAVE_DIR)/program_memory_tb.vcd &
 
 # Simulate Datapath module
-sim_datapath:
+sim_datapath: select_program
 	@echo "🔨 Compiling Datapath testbench..."
 	$(IVERILOG) -o $(SIM_OUT_DIR)/datapath_tb.out $(SRC_DIR)/decode.v $(SRC_DIR)/data_memory.v $(SRC_DIR)/program_memory.v \
-            $(SRC_DIR)/control.v $(SRC_DIR)/regfile.v $(SRC_DIR)/alu.v $(SRC_DIR)/memory.v  \
+            $(SRC_DIR)/control.v $(SRC_DIR)/regfile.v $(SRC_DIR)/alu.v \
 			$(SRC_DIR)/datapath.v $(SIM_DIR)/datapath_tb.v
 	@echo "🚀 Running Datapath simulation..."
 	$(VVP) $(SIM_OUT_DIR)/datapath_tb.out
 	@echo "📊 Opening GTKWave for Datapath waveforms..."
 	$(GTK) $(WAVE_DIR)/datapath_tb.vcd &
 
+# Simulate CPU module
+sim_cpu: select_program
+	@echo "🔨 Compiling CPU testbench..."
+	$(IVERILOG) -o $(SIM_OUT_DIR)/cpu_tb.out $(SRC_FILES) $(TB_FILES)
+	@echo "🚀 Running CPU simulation..."
+	$(VVP) $(SIM_OUT_DIR)/cpu_tb.out
+	@echo "📊 Opening GTKWave for CPU waveforms..."
+	$(GTK) $(WAVE_DIR)/cpu_tb.vcd &
+
+
+.PHONY: help synth route clean test select_program compile simulate wave sim_alu sim_regfile sim_control sim_decode sim_data_memory sim_program_memory sim_datapath
+
+########################################################################################
+# Help message
+########################################################################################
+
 help:
 	@echo "🛠  Available Makefile Commands:"
-	@echo "-----------------------------------------------"
-	@echo "make help           		- Show this help message"
-	@echo "make test PROGRAM=N 		- Run test with program_N.mem (e.g., make test PROGRAM=1)"
-	@echo "make compile        		- Compile Verilog files"
-	@echo "make simulate       		- Run simulation"
-	@echo "make wave           		- Open GTKWave for waveform analysis"
-	@echo "make synth          		- Synthesize the design for FPGA"
-	@echo "make route          		- Perform FPGA place & route"
-	@echo "make clean          		- Remove temporary files"
-	@echo "make sim_alu        		- Simulate ALU module"
-	@echo "make sim_regfile    		- Simulate Regfile module"
-	@echo "make sim_control    		- Simulate Control module"
-	@echo "make sim_decode     		- Simulate Decode module"
-	@echo "make sim_data_memory 	- Simulate Data Memory module"
-	@echo "make sim_program_memory 	- Simulate Program Memory module"
-	@echo "make sim_datapath   		- Simulate Datapath module"
-	@echo "-----------------------------------------------"
+	@echo "-----------------------------------------------------------------------------------------------"
+	@echo "make help           				- Show this help message"
+	@echo "make test PROGRAM=N 				- Run test with program_N.mem (e.g., make test PROGRAM=1)"
+	@echo "make compile        				- Compile Verilog files"
+	@echo "make simulate       				- Run simulation"
+	@echo "make wave           				- Open GTKWave for waveform analysis"
+	@echo "make synth          				- Synthesize the design for FPGA"
+	@echo "make synth_all      				- Synthesize all modules for FPGA"
+	@echo "make synth_cpu      				- Synthesize CPU module for FPGA"
+	@echo "make synth_datapath 				- Synthesize Datapath module for FPGA"
+	@echo "make synth_alu      				- Synthesize ALU module for FPGA"
+	@echo "make synth_regfile  				- Synthesize Regfile module for FPGA"
+	@echo "make synth_control  				- Synthesize Control module for FPGA"
+	@echo "make synth_decode   				- Synthesize Decode module for FPGA"
+	@echo "make synth_data_memory 			- Synthesize Data Memory module for FPGA"
+	@echo "make synth_program_memory 		- Synthesize Program Memory module for FPGA"
+	@echo "make route          				- Perform FPGA place & route"
+	@echo "make clean          				- Remove temporary files"
+	@echo "make sim_alu        				- Simulate ALU module"
+	@echo "make sim_regfile    				- Simulate Regfile module"
+	@echo "make sim_control    				- Simulate Control module"
+	@echo "make sim_decode     				- Simulate Decode module"
+	@echo "make sim_data_memory 			- Simulate Data Memory module"
+	@echo "make sim_program_memory 			- Simulate Program Memory module"
+	@echo "make sim_datapath   				- Simulate Datapath module"
+	@echo "-----------------------------------------------------------------------------------------------"
 
 
 # Color codes

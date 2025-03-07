@@ -7,36 +7,36 @@ module program_memory (
     // === MEMORY ARRAY === 
     reg [31:0] instr_mem [0:31];      // Instruction Memory (ROM)
 
+    integer i;
+
 
     // === INSTRUCTION MEMORY INITIALIZATION ===
     initial begin
         // Explicitly initialize all memory locations to zero
-        for (integer i = 0; i < 32; i = i + 1) begin
+        for (i = 0; i < 32; i = i + 1) begin
             instr_mem[i] = 32'b0;
         end
 
-        // Load Instructions from program.mem
-        $readmemh("sim/program.mem", instr_mem);        
+        `ifndef SYNTHESIS
+            // Load Instructions from program.mem
+            $readmemh("sim/program.mem", instr_mem);        
 
-        if (!debug) begin
-            $display("---------------------------------");
-            $display("✅ Instruction Memory Loaded:");
-            for (integer i = 0; i < 32; i = i + 1) begin
-                $display("instr_mem[%0d] = %h", i, instr_mem[i]);
+            if (debug) begin
+                $display("---------------------------------");
+                $display("✅ Instruction Memory Loaded:");
+                for (i = 0; i < 32; i = i + 1) begin
+                    $display("instr_mem[%0d] = %h", i, instr_mem[i]);
+                end
+                $display("---------------------------------");
+                $display("");
             end
-            $display("---------------------------------");
-            $display("");
-        end
+        `endif
     end
 
 
     // === INSTRUCTION FETCH (ROM) ===
     assign instr_out = (pc >> 2 < 32) ? instr_mem[pc >> 2] : 32'b0; // Fetch instruction from memory
 
-    // === Debugging ===
-    always @(*) begin
-        // $display("🔍 (program_memory) Fetching Instruction at PC = %h -> instr_mem[%0d] = %h", pc, pc >> 2, instr_out);
-    end
 endmodule
 
 

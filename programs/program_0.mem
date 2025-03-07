@@ -1,0 +1,73 @@
+// =======================================
+// 📌 Comprehensive RISC-V Test Program
+// =======================================
+
+// 🔹 (04) -> Register Initialization (I-type)
+00100093  // ADDI x1, x0, 1     -> x1 = 1
+00200113  // ADDI x2, x0, 2     -> x2 = 2
+00300193  // ADDI x3, x0, 3     -> x3 = 3
+00400213  // ADDI x4, x0, 4     -> x4 = 4
+
+
+// 🔹 (02) -> Padding (NOP)
+00000000
+00000000
+
+
+// 🔹 (05) -> Arithmetic & Logic Operations (R-type)
+002081B3  // ADD x3, x1, x2     -> x3 = x1 + x2 = 3
+40110233  // SUB x4, x2, x1     -> x4 = x2 - x1 = 1 ; before 40210233
+0031F2B3  // AND x5, x3, x3     -> x5 = x3 & x3 = 3
+0031E333  // OR x6, x3, x3      -> x6 = x3 | x3 = 3
+0031C3B3  // XOR x7, x3, x3     -> x7 = x3 ^ x3 = 0
+
+
+// 🔹 (02) -> Padding (NOP)
+00000000
+00000000
+
+
+// 🔹 (03) -> Shift Instructions (R-type)
+002092B3  // SLL x5, x1, x2     -> x5 = x1 << x2 (1 << 2 = 4)
+0020D333  // SRL x6, x1, x2     -> x6 = x1 >> x2 (1 >> 2 = 0)
+4020D3B3  // SRA x7, x1, x2     -> x7 = x1 >> x2 (Arithmetic)
+
+
+// 🔹 (02) -> Padding (NOP)
+00000000
+00000000
+
+
+// 🔹 (02) -> Memory Load (I-type) and Store (S-type)
+00A12023  // SW x10, 0(x2)      -> MEM[x2 + 0] = x10
+00012103  // LW x2, 0(x2)       -> x2 = MEM[x2 + 0]
+
+
+// 🔹 (02) -> Padding (NOP)
+00000000
+00000000
+
+
+// 🔹 (02) -> Branch Instructions (B-type)
+00208663  // BEQ x1, x2, 12     -> Branch if x1 == x2 (Not taken)
+00209663  // BNE x1, x2, 12     -> Branch if x1 != x2 (Taken, jump 12 bytes)
+
+
+// 🔹 (02) -> Padding (NOP)
+00000000
+00000000
+
+
+// 🔹 (02) -> Jump Instructions
+0000026F  // JAL x5, 8          -> x5 = PC+4, jump +8 bytes
+00028067  // JALR x0, x5, 0     -> Jump to x5 (Return to PC)
+
+// =======================================
+// End of Program
+// =======================================
+
+// 🔹 (04) -> Padding (NOP)
+00000000
+00000000
+00000000
+00000000

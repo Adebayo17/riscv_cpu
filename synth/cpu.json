@@ -1,0 +1,50 @@
+{
+  "creator": "Yosys 0.9 (git sha1 1979e0b)",
+  "modules": {
+    "cpu": {
+      "attributes": {
+        "top": 1,
+        "src": "src/cpu.v:1"
+      },
+      "ports": {
+        "clk": {
+          "direction": "input",
+          "bits": [ 2 ]
+        },
+        "reset_n": {
+          "direction": "input",
+          "bits": [ 3 ]
+        },
+        "debug": {
+          "direction": "input",
+          "bits": [ 4 ]
+        }
+      },
+      "cells": {
+      },
+      "netnames": {
+        "clk": {
+          "hide_name": 0,
+          "bits": [ 2 ],
+          "attributes": {
+            "src": "src/cpu.v:2"
+          }
+        },
+        "debug": {
+          "hide_name": 0,
+          "bits": [ 4 ],
+          "attributes": {
+            "src": "src/cpu.v:4"
+          }
+        },
+        "reset_n": {
+          "hide_name": 0,
+          "bits": [ 3 ],
+          "attributes": {
+            "src": "src/cpu.v:3"
+          }
+        }
+      }
+    }
+  }
+}

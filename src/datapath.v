@@ -68,11 +68,19 @@ module datapath (
     // === PROGRAM COUNTER ===
     reg  [31:0] pc, next_pc;
 
+    // === PIPELINE CONTROL ===
+    reg         pipeline_flush; // Flush pipeline on branch/jump
+    wire [31:0] branch_target;
+
     // === PIPELINE REGISTERS ===
     // IF to ID
     reg  [31:0] IF_to_ID_instr;
+    reg  [31:0] IF_to_ID_pc;
 
     // ID to EX
+    reg  [31:0] ID_to_EX_pc;
+    reg  [31:0] ID_to_EX_instr;
+    reg  [2:0]  ID_to_EX_funct3;
     reg  [31:0] ID_to_EX_read_data_1;
     reg  [31:0] ID_to_EX_read_data_2;
     reg  [31:0] ID_to_EX_imm;
@@ -86,8 +94,11 @@ module datapath (
     reg         ID_to_EX_mem_write;
     reg         ID_to_EX_reg_write;
     reg         ID_to_EX_mem_to_reg;
+    reg  [6:0]  ID_to_EX_opcode;
 
     // EX to MEM
+    reg  [31:0] EX_to_MEM_pc;
+    reg  [31:0] EX_to_MEM_instr;
     reg  [31:0] EX_to_MEM_alu_result;
     reg  [31:0] EX_to_MEM_read_data_2;
     reg  [4:0]  EX_to_MEM_rd;
@@ -95,18 +106,24 @@ module datapath (
     reg         EX_to_MEM_mem_write;
     reg         EX_to_MEM_reg_write;
     reg         EX_to_MEM_mem_to_reg;
+    reg         EX_to_MEM_branch;    
+    reg         EX_to_MEM_jump;
 
     // MEM to WB
+    reg  [31:0] MEM_to_WB_pc;
+    reg  [31:0] MEM_to_WB_instr;
     reg  [31:0] MEM_to_WB_alu_result;
     reg  [31:0] MEM_to_WB_mem_data;
     reg  [4:0]  MEM_to_WB_rd;
     reg         MEM_to_WB_reg_write;
     reg         MEM_to_WB_mem_to_reg;
+    reg         MEM_to_WB_branch;
+    reg         MEM_to_WB_jump;
 
 
-    // ==============================
-    // === INSTRUCTION FETCH (IF) ===
-    // ==============================
+    // =============================================================================================
+    // ===                                INSTRUCTION FETCH (IF)                                 ===     
+    // =============================================================================================
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             pc <= 32'h00000000;
@@ -124,9 +141,13 @@ module datapath (
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
+            IF_to_ID_pc     <= 0;
+            IF_to_ID_instr  <= 0;
+        end else if (pipeline_flush) begin
+            IF_to_ID_pc     <= 0;
             IF_to_ID_instr  <= 0;
         end else begin
-            //$display("🔍 (datapth) IF/ID Pipeline: Storing instr = %h (PC = %h)", program_memory0__instr_out, pc);
+            IF_to_ID_pc     <= pc;
             IF_to_ID_instr  <= program_memory0__instr_out;
         end
     end
@@ -135,9 +156,9 @@ module datapath (
     assign instr = program_memory0__instr_out;
 
 
-    // ===============================
-    // === INSTRUCTION DECODE (ID) ===
-    // ===============================
+    // =============================================================================================
+    // ===                              INSTRUCTION DECODE (ID)                                  ===        
+    // =============================================================================================
 
     assign decoder__instr = IF_to_ID_instr;
 
@@ -224,24 +245,46 @@ module datapath (
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
+            ID_to_EX_pc          <= 0;
+            ID_to_EX_instr       <= 0;
             ID_to_EX_rd          <= 0;
             ID_to_EX_imm         <= 0;
-
+            ID_to_EX_funct3      <= 0;
             ID_to_EX_read_data_1 <= 0;
             ID_to_EX_read_data_2 <= 0;
-
             ID_to_EX_alu_ctrl    <= 0;
             ID_to_EX_alu_src     <= 0;
             ID_to_EX_branch      <= 0;
             ID_to_EX_jump        <= 0;
-
             ID_to_EX_mem_read    <= 0;
             ID_to_EX_mem_write   <= 0;
             ID_to_EX_reg_write   <= 0;
             ID_to_EX_mem_to_reg  <= 0;
+            ID_to_EX_opcode      <= 0;
+        end else if (pipeline_flush) begin
+            ID_to_EX_pc          <= 0;
+            ID_to_EX_instr       <= 0;
+            ID_to_EX_rd          <= 0;
+            ID_to_EX_imm         <= 0;
+            ID_to_EX_funct3      <= 0;
+            ID_to_EX_read_data_1 <= 0;
+            ID_to_EX_read_data_2 <= 0;
+            ID_to_EX_alu_ctrl    <= 0;
+            ID_to_EX_alu_src     <= 0;
+            ID_to_EX_branch      <= 0;
+            ID_to_EX_jump        <= 0;
+            ID_to_EX_mem_read    <= 0;
+            ID_to_EX_mem_write   <= 0;
+            ID_to_EX_reg_write   <= 0;
+            ID_to_EX_mem_to_reg  <= 0;
+            ID_to_EX_opcode      <= 0;
         end else begin
+            ID_to_EX_pc          <= pc;
+            ID_to_EX_instr       <= IF_to_ID_instr;
             ID_to_EX_rd          <= decoder__rd;
             ID_to_EX_imm         <= decoder__imm;
+            ID_to_EX_opcode      <= decoder__opcode; 
+            ID_to_EX_funct3      <= decoder__funct3;
             ID_to_EX_read_data_1 <= registers__read_data_1;
             ID_to_EX_read_data_2 <= registers__read_data_2;
             ID_to_EX_alu_ctrl    <= alu_ctrl_calculated;
@@ -257,9 +300,9 @@ module datapath (
 
 
 
-    // =======================
-    // === EXECUTION (EX) ===
-    // ======================
+    // =============================================================================================
+    // ===                                    EXECUTION (EX)                                     ===    
+    // =============================================================================================
 
     assign alu_unit__a          = ID_to_EX_read_data_1;
     assign alu_unit__b          = (ID_to_EX_alu_src) ? ID_to_EX_imm : ID_to_EX_read_data_2;
@@ -275,25 +318,64 @@ module datapath (
         .alu_ready          (alu_unit__alu_ready)
     );
 
+    // Branch and Jump Targets
+    assign branch_target = ID_to_EX_pc + ID_to_EX_imm;
+
     // Branch and Jump Logic
     always @(*) begin
-        if (ID_to_EX_jump && (decoder__opcode == JALR_OPCODE)) begin
+        if (ID_to_EX_jump && (ID_to_EX_opcode == JALR_OPCODE)) begin
             // JALR: PC = rs1 + imm (with LSB set to 0)
             next_pc = (ID_to_EX_read_data_1 + ID_to_EX_imm) & ~32'b1;
-        end else if (ID_to_EX_branch && alu_unit__zero) begin
+            pipeline_flush = 1; // Flush pipeline
+        end else if (ID_to_EX_branch) begin
             // Branch taken: PC = PC + imm
-            next_pc = pc + ID_to_EX_imm;
+            // branch_target = ID_to_EX_pc + ID_to_EX_imm;
+            case (ID_to_EX_funct3)
+                3'b000: begin
+                    next_pc = (alu_unit__zero) ? branch_target : pc + 4; // BEQ
+                    pipeline_flush = 1;
+                end
+                3'b001: begin
+                    next_pc = (!alu_unit__zero) ? branch_target : pc + 4; // BNE
+                    pipeline_flush = 1;
+                end
+                3'b100: begin
+                    next_pc = ($signed(ID_to_EX_read_data_1) < $signed(ID_to_EX_read_data_2)) ? branch_target : pc + 4; // BLT
+                    pipeline_flush = 1;
+                end
+                3'b101: begin
+                    next_pc = ($signed(ID_to_EX_read_data_1) >= $signed(ID_to_EX_read_data_2)) ? branch_target : pc + 4; // BGE
+                    pipeline_flush = 1;
+                end
+                3'b110: begin
+                    next_pc = (ID_to_EX_read_data_1 < ID_to_EX_read_data_2) ? branch_target : pc + 4; // BLTU
+                    pipeline_flush = 1;
+                end
+                3'b111: begin
+                    next_pc = (ID_to_EX_read_data_1 >= ID_to_EX_read_data_2) ? branch_target : pc + 4; // BGEU
+                    pipeline_flush = 1;
+                end
+                default: begin
+                    next_pc = pc + 4;
+                    pipeline_flush = 0;
+                end
+            endcase
         end else if (ID_to_EX_jump) begin
             // JAL: PC = PC + imm
-            next_pc = pc + ID_to_EX_imm;
+            // next_pc = pc + ID_to_EX_imm;
+            next_pc = ID_to_EX_pc + ID_to_EX_imm;
+            pipeline_flush = 1; // Flush pipeline
         end else begin
             // Default: PC = PC + 4
             next_pc = pc + 4;
+            pipeline_flush = 0; // Do not flush pipeline
         end
     end
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
+            EX_to_MEM_pc            <= 0;
+            EX_to_MEM_instr         <= 0;
             EX_to_MEM_alu_result    <= 0;
             EX_to_MEM_read_data_2   <= 0;
             EX_to_MEM_rd            <= 0;
@@ -301,7 +383,23 @@ module datapath (
             EX_to_MEM_mem_write     <= 0;
             EX_to_MEM_reg_write     <= 0;
             EX_to_MEM_mem_to_reg    <= 0;
+            EX_to_MEM_branch        <= 0;
+            EX_to_MEM_jump          <= 0;
+        end else if (pipeline_flush) begin
+            EX_to_MEM_pc            <= 0;
+            EX_to_MEM_instr         <= 0;
+            EX_to_MEM_alu_result    <= 0;
+            EX_to_MEM_read_data_2   <= 0;
+            EX_to_MEM_rd            <= 0;
+            EX_to_MEM_mem_read      <= 0;
+            EX_to_MEM_mem_write     <= 0;
+            EX_to_MEM_reg_write     <= 0;
+            EX_to_MEM_mem_to_reg    <= 0;
+            EX_to_MEM_branch        <= 0;
+            EX_to_MEM_jump          <= 0;
         end else begin
+            EX_to_MEM_pc            <= ID_to_EX_pc;
+            EX_to_MEM_instr         <= ID_to_EX_instr;
             EX_to_MEM_alu_result    <= alu_unit__result;
             EX_to_MEM_read_data_2   <= ID_to_EX_read_data_2;
             EX_to_MEM_rd            <= ID_to_EX_rd;
@@ -309,12 +407,14 @@ module datapath (
             EX_to_MEM_mem_write     <= ID_to_EX_mem_write;
             EX_to_MEM_reg_write     <= ID_to_EX_reg_write;
             EX_to_MEM_mem_to_reg    <= ID_to_EX_mem_to_reg;
+            EX_to_MEM_branch        <= ID_to_EX_branch;
+            EX_to_MEM_jump          <= ID_to_EX_jump;
         end
     end
 
-    // =====================
-    // === MEMORY (MEM) ===
-    // ====================
+    // =============================================================================================
+    // ===                                    MEMORY (MEM)                                       ===     
+    // =============================================================================================
 
     assign data_memory0__mem_write  = EX_to_MEM_mem_write;
     assign data_memory0__mem_read   = EX_to_MEM_mem_read;
@@ -334,27 +434,35 @@ module datapath (
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
+            MEM_to_WB_pc           <= 0;
+            MEM_to_WB_instr        <= 0;
             MEM_to_WB_alu_result   <= 0;
             MEM_to_WB_mem_data     <= 0;
             MEM_to_WB_rd           <= 0;
             MEM_to_WB_reg_write    <= 0;
             MEM_to_WB_mem_to_reg   <= 0;
+            MEM_to_WB_branch       <= 0;
+            MEM_to_WB_jump         <= 0;
         end else begin
+            MEM_to_WB_pc           <= EX_to_MEM_pc;
+            MEM_to_WB_instr        <= EX_to_MEM_instr;
             MEM_to_WB_alu_result   <= EX_to_MEM_alu_result;
             MEM_to_WB_mem_data     <= data_memory0__read_data;
             MEM_to_WB_rd           <= EX_to_MEM_rd;
             MEM_to_WB_reg_write    <= EX_to_MEM_reg_write;
             MEM_to_WB_mem_to_reg   <= EX_to_MEM_mem_to_reg;
+            MEM_to_WB_branch       <= EX_to_MEM_branch;
+            MEM_to_WB_jump         <= EX_to_MEM_jump;
         end
     end
 
-    // ======================
-    // === WRITEBACK (WB) ===
-    // ======================
+    // =============================================================================================
+    // ===                                    WRITEBACK (WB)                                     ===     
+    // =============================================================================================
 
     // Writeback Mux
     assign registers__write_data    =   (MEM_to_WB_mem_to_reg) ? MEM_to_WB_mem_data : 
-                                        (ID_to_EX_jump) ? (pc + 4) :  MEM_to_WB_alu_result;
+                                        (MEM_to_WB_jump) ? (pc + 4) :  MEM_to_WB_alu_result;
     
     // Write to Register File
     assign registers__write_enable  = MEM_to_WB_reg_write;

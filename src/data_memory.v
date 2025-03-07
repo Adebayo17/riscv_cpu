@@ -12,43 +12,64 @@ module data_memory (
     // === MEMORY ARRAYS === 
     reg [31:0] data_mem  [0:31];      // Data Memory (RAM)
 
+    integer i, j;
+
 
     // === DATA MEMORY INITIALIZATION ===
     initial begin
-        for (integer i = 0; i < 32; i = i + 1) begin
-            data_mem[i] <= 32'b0;
+        for (j = 0; j < 32; j = j + 1) begin
+            data_mem[j] = 32'b0;
         end
     end
 
-    
-    // === RESET HANDLING (CLEAR DATA MEMORY) ===
-    always @(negedge reset_n) begin
-        for (integer i = 0; i < 32; i = i + 1) begin
-            data_mem[i] <= 32'b0;
-        end
-    end
-
-    
-    // === DATA MEMORY WRITE (RAM) ===
-    always @(posedge clk) begin
-        if (mem_write) begin
+    // === MAIN LOGIC ===
+    always @(posedge clk or negedge reset_n) begin
+        // Reset Memory
+        if (!reset_n) begin 
+            for (i = 0; i < 32; i = i + 1) begin
+                data_mem[i] <= 32'b0;
+            end
+        end 
+        // Write Memory
+        else if (mem_write) begin
             data_mem[data_addr >> 2] <= write_data;
-            if (debug) 
-                $display("📝 Memory Write: Addr %h = %h", data_addr, write_data);
-        end
-    end
-
-    
-    // === DATA MEMORY READ (RAM) ===
-    always @(posedge clk) begin
-        if (mem_read) begin
+        end 
+        // Read Memory
+        else if (mem_read) begin
             read_data = data_mem[data_addr >> 2];
-            if (debug) 
-                $display("📖 Memory Read: Addr %h -> %h", data_addr, read_data);
         end else begin
             read_data = 32'b0;
-        end
+        end 
     end
+
+    // // === RESET HANDLING (CLEAR DATA MEMORY) ===
+    // always @(negedge reset_n) begin
+    //     for (i = 0; i < 32; i = i + 1) begin
+    //         data_mem[i] <= 32'b0;
+    //     end
+    // end
+
+    
+    // // === DATA MEMORY WRITE (RAM) ===
+    // always @(posedge clk) begin
+    //     if (mem_write) begin
+    //         data_mem[data_addr >> 2] <= write_data;
+    //         if (debug) 
+    //             $display("📝 Memory Write: Addr %h = %h", data_addr, write_data);
+    //     end
+    // end
+
+    
+    // // === DATA MEMORY READ (RAM) ===
+    // always @(posedge clk) begin
+    //     if (mem_read) begin
+    //         read_data = data_mem[data_addr >> 2];
+    //         if (debug) 
+    //             $display("📖 Memory Read: Addr %h -> %h", data_addr, read_data);
+    //     end else begin
+    //         read_data = 32'b0;
+    //     end
+    // end
 endmodule
 
 
