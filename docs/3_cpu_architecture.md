@@ -9,30 +9,71 @@ Below is a block diagram of the 5-stage pipeline RISC-V CPU:
 
 ```mermaid
 graph TD
-    A[Fetch Stage] --> B[Decode Stage]
-    B --> C[Execute Stage]
-    C --> D[Memory Stage]
-    D --> E[Writeback Stage]
+    PC[Program Counter] --> IM[Instruction Memory]
+    IM --> ID[Instruction Decoder]
+    ID --> RF[Register File]
+    RF --> ALU[Arithmetic Logic Unit]
+    ALU --> DM[Data Memory]
+    DM --> WB[Writeback]
 
     subgraph Fetch
-        A1[PC] --> A2[Instruction Memory]
+        PC --> IM
     end
 
     subgraph Decode
-        B1[Instruction Decoder] --> B2[Register File]
+        ID --> RF
     end
 
     subgraph Execute
-        C1[ALU] --> C2[Immediate Generator]
+        RF --> ALU
     end
 
     subgraph Memory
-        D1[Data Memory]
+        ALU --> DM
     end
 
     subgraph Writeback
-        E1[Register File]
+        DM --> WB
     end
+```
+
+## Internal Architecture
+
+Below is a detailed diagram representing the internal architecture of the CPU and its connections:
+
+```mermaid
+graph TD
+    subgraph IF[Instruction Fetch]
+        PC[Program Counter] --> IM[Instruction Memory]
+        IM --> IF_ID[IF/ID Pipeline Register]
+    end
+
+    subgraph ID[Instruction Decode]
+        IF_ID --> DEC[Decoder]
+        DEC --> CTRL[Control Unit]
+        DEC --> RF[Register File]
+        RF --> ID_EX[ID/EX Pipeline Register]
+    end
+
+    subgraph EX[Execute]
+        ID_EX --> ALU[Arithmetic Logic Unit]
+        ALU --> EX_MEM[EX/MEM Pipeline Register]
+    end
+
+    subgraph MEM[Memory Access]
+        EX_MEM --> DM[Data Memory]
+        DM --> MEM_WB[MEM/WB Pipeline Register]
+    end
+
+    subgraph WB[Write Back]
+        MEM_WB --> RF
+    end
+
+    CTRL --> ID_EX
+    CTRL --> EX_MEM
+    CTRL --> MEM_WB
+    ALU --> BR[Branch Logic]
+    BR --> PC
 ```
 
 ---

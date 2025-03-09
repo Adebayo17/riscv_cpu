@@ -3,7 +3,6 @@ IVERILOG = iverilog
 VVP = vvp
 GTK = gtkwave
 YOSYS = yosys
-NEXTPNR = nextpnr-ice40
 
 # Assembler and tools
 AS = riscv64-unknown-elf-as
@@ -125,12 +124,6 @@ synth_data_memory:
 synth_program_memory:
 	$(MAKE) synth MODULE=program_memory
 
-########################################################################################
-# FPGA Place & Route
-########################################################################################
-route: synth
-	@echo "📌 Running placement & routing..."
-	$(NEXTPNR) --hx8k --package tq144 --json $(SYNTH_DIR)/$(MODULE).json --pcf constraints.pcf --asc $(SYNTH_DIR)/$(MODULE).asc
 
 
 ########################################################################################
@@ -203,7 +196,7 @@ sim_cpu: select_program
 	$(GTK) $(WAVE_DIR)/cpu_tb.vcd &
 
 
-.PHONY: help synth sim route clean test select_program compile simulate wave sim_alu sim_regfile sim_control sim_decode sim_data_memory sim_program_memory sim_datapath sim_cpu asm_to_mem_all asm_to_mem
+.PHONY: help synth sim route clean test select_program compile simulate wave sim_alu sim_regfile sim_control sim_decode sim_data_memory sim_program_memory sim_datapath sim_cpu asm_to_mem_all asm_to_mem 
 
 
 ########################################################################################
@@ -215,7 +208,7 @@ clean:
 	rm -rf $(WAVE_DIR)/*.vcd
 	rm -rf $(SIM_OUT_DIR)/*.out  $(SIM_OUT_DIR)/*.log 
 	rm -rf $(SYNTH_DIR)/*.json $(SYNTH_DIR)/*.blif $(SYNTH_DIR)/*.asc $(SYNTH_DIR)/*.svg
-	rm -rf $(ASM_DIR)/*.o $(ASM_DIR)/*.hex $(PROG_DIR)/*.mem
+	rm -rf $(ASM_DIR)/*.o $(ASM_DIR)/*.hex 
 	rm -rf $(MEM_FILE)
 	@echo "✅ Cleaned up!"
 

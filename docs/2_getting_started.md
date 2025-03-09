@@ -56,6 +56,8 @@ The project is organized into the following directories:
 
 ### Key Directories
 
+-   **`asm/`**: Contains the assembly programs to test on the RISC-V
+
 -   **`src/`**: Contains the Verilog source files for the CPU modules.
     -   **`alu.v`**: Arithmetic Logic Unit (ALU) implementation.
     -   **`control.v`**: Control unit for instruction decoding.
@@ -76,7 +78,7 @@ The project is organized into the following directories:
     -   **`program_0.mem`**, **`program_1.mem`**, etc.: Example programs in hexadecimal format.
 
 -   **`synth/`**: Output files for FPGA synthesis.
-    -   **`cpu.json`**, **`cpu.blif`**, **`cpu.asc`**: Synthesis and place-and-route outputs.
+    -   **`cpu.json`**, **`cpu.blif`**, **`cpu.asc`**: Synthesis outputs.
     -   **`cpu.svg`**: Visual representation of the synthesized design.
 
 -   **`wave/`**: Waveform files for debugging.
@@ -114,16 +116,11 @@ To synthesize the design for an FPGA:
 
 1. Run the synthesis:
     ```bash
-    make synth_cpu
+    make synth MODULE=cpu
     ```
-    Or for one module (alu, decode, control, regfile, datapth, data_memory, program_memory, cpu)
+    Or
     ```bash
     make synth_<MODULE_NAME>
-    ```
-
-2. Perform place and route:
-    ```bash
-    make route
     ```
 
 ---
