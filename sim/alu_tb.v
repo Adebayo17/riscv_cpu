@@ -188,69 +188,30 @@ module alu_tb;
         else
             $display("✅ PASS");
 
-        // Test 13: MUL operation (positive * positive)
-        a = 32'h00000005;
-        b = 32'h00000003;
-        alu_ctrl = 4'b1000; // MUL
-        #10;
-        $display("\nTest 13: MUL (positive * positive)");
-        $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-                 a, b, alu_ctrl, result, zero, alu_ready);
-        if (result !== 32'h0000000F || zero !== 0 || alu_ready !== 1)
-            $display("❌ ERROR: Test 13 failed!");
-        else
-            $display("✅ PASS");
-        
-        // Test 14: MUL operation (negative * negative)
-        a = 32'hFFFFFFFC; // -4
-        b = 32'hFFFFFFFE; // -2
-        alu_ctrl = 4'b1000; // MUL
-        #10;
-        $display("\nTest 14: MUL (negative * negative)");
-        $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-                 a, b, alu_ctrl, result, zero, alu_ready);
-        if (result !== 32'h00000008 || zero !== 0 || alu_ready !== 1) // 8
-            $display("❌ ERROR: Test 14 failed!");
-        else
-            $display("✅ PASS");
 
-        // Test 15: MUL operation (negative * positive)
-        a = 32'hFFFFFFFC; // -4
-        b = 32'h00000003; // 3
-        alu_ctrl = 4'b1000; // MUL
-        #10;
-        $display("\nTest 15: MUL (negative * positive)");
-        $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
-                 a, b, alu_ctrl, result, zero, alu_ready);
-        if (result !== 32'hFFFFFFF4 || zero !== 0 || alu_ready !== 1) // -12
-            $display("❌ ERROR: Test 15 failed!");
-        else
-            $display("✅ PASS");
-
-
-        // Test 16: Zero flag test
+        // Test 13: Zero flag test
         a = 32'h00000000;
         b = 32'h00000000;
         alu_ctrl = 4'b0000; // ADD
         #10;
-        $display("\nTest 16: Zero Flag Test");
+        $display("\nTest 13: Zero Flag Test");
         $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
                  a, b, alu_ctrl, result, zero, alu_ready);
         if (result !== 32'h00000000 || zero !== 1 || alu_ready !== 1)
-            $display("❌ ERROR: Test 16 failed!");
+            $display("❌ ERROR: Test 13 failed!");
         else
             $display("✅ PASS");
         
-        // Test 17: Incorrect ALU operation
+        // Test 14: Incorrect ALU operation
         a = 32'h00000005;
         b = 32'h00000005;
         alu_ctrl = 4'b1111; // Incorrect operation
         #10;
-        $display("\nTest 17: Incorrect ALU operation");
+        $display("\nTest 14: Incorrect ALU operation");
         $display("  a = %h, b = %h, alu_ctrl = %b, result = %h, zero = %b, alu_ready = %b",
                  a, b, alu_ctrl, result, zero, alu_ready);
         if (result !== 32'h00000000 || zero !== 1 || alu_ready !== 1)
-            $display("❌ ERROR: Test 17 failed!");
+            $display("❌ ERROR: Test 14 failed!");
         else
             $display("✅ PASS");
 

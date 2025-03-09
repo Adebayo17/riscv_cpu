@@ -212,7 +212,6 @@ module datapath (
             {R_TYPE_OPCODE, 7'b0000000, 3'b001}: alu_ctrl_calculated = 4'b0101; // SLL
             {R_TYPE_OPCODE, 7'b0000000, 3'b101}: alu_ctrl_calculated = 4'b0110; // SRL
             {R_TYPE_OPCODE, 7'b0100000, 3'b101}: alu_ctrl_calculated = 4'b0111; // SRA
-            {R_TYPE_OPCODE, 7'b0000001, 3'b000}: alu_ctrl_calculated = 4'b1000; // MUL
 
             // I-type instructions
             {I_TYPE_OPCODE, 7'b0000000, 3'b000}: alu_ctrl_calculated = 4'b0000; // ADDI

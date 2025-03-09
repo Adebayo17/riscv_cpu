@@ -18,7 +18,6 @@ module alu (
             4'b0101:    result = a << b;                                        // SLL (Shift Left Logical)
             4'b0110:    result = a >> b;                                        // SRL (Shift Right Logical)
             4'b0111:    result = $signed(a) >>> b;                              // SRA (Shift Right Arithmetic)
-            4'b1000:    result = a * b;                                         // MUL
             default:    result = 32'b0;                                         // Default case 
         endcase
         alu_ready = 1;
