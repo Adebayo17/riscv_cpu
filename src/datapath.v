@@ -200,7 +200,7 @@ module datapath (
     assign registers__read_addr_1   = decoder__rs1;
     assign registers__read_addr_2   = decoder__rs2;
 
-    // TO COMPLETE
+    // ALU Control Logic
     always @(*) begin
         case ({decoder__opcode, decoder__funct7, decoder__funct3})
             // R-type instructions
