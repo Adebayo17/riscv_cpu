@@ -3,6 +3,8 @@
 ## Overview
 This project implements a 32-bit RISC-V CPU in Verilog. It is designed to support a subset of the RISC-V instruction set and is intended for educational purposes, particularly for students in Integrated Electronics Systems Engineering.
 
+![CPU Architecture](./draw/archi.png)
+
 ## Features
 
 - **RISC-V ISA Support**: Implements a subset of the RV32I base instruction set, including arithmetic, memory, and control instructions.
